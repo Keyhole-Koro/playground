@@ -11,13 +11,12 @@ opponentIP = "localhost"
 opponentPORT = 12345
 def communicate():
 	with p2p.p2pconnect_to(opponentIP, opponentPORT) as opponent:
-		while True:
-			thread1 = threading.Thread(target = receive, args = ([s]))
-			thread2 = threading.Thread(target = send, args = ([s]))
-			thread1.start()
-			thread2.start()
-			thread1.join()
-			thread2.join()
+		thread1 = threading.Thread(target = receive, args = ([s]))
+		thread2 = threading.Thread(target = send, args = ([s]))
+		thread1.start()
+		thread2.start()
+		thread1.join()
+		thread2.join()
 			
 
 	

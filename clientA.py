@@ -1,24 +1,35 @@
 import socket
+import threading
 
-HOST = ''
-PORT = 12345
+def receive_message(sock):
+	while True:
+		data = sock.recv(1024)
+		if not data:
+			break
+		print(f"Received: {data.decode()}")
 
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def get_input(sock):
+	while True:
+		user_input = input()
+		sock.sendall(user_input.encode())
 
-server_socket.bind((HOST, PORT))
+server_address = ('localhost', 12345)
 
-server_socket.listen(1)
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-print(f'Listening on {HOST}:{PORT}')
+# Connect the socket to the server
+sock.connect(server_address)
 
-while True:
-	client_socket, client_address = server_socket.accept()
-	print(f'Connection from {client_address}')
+# Start the thread to receive messages
+receive_thread = threading.Thread(target=receive_message, args=(sock,))
+receive_thread.daemon = True
+receive_thread.start()
 
-	data = client_socket.recv(1024)
-	print(f'Received: {data.decode()}')
+# Start the thread to get input from the user and send messages
+input_thread = threading.Thread(target=get_input, args=(sock,))
+input_thread.daemon = True
+input_thread.start()
 
-	response = 'Hello, client!'.encode()
-	client_socket.sendall(response)
-
-	client_socket.close()
+# Wait for the input thread to complete (which will never happen)
+input_thread.join()
