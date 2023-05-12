@@ -1,35 +1,64 @@
-import socket
+import tkinter as tk
 import threading
+import time
+import socket
 
-def receive_message(sock):
+import p2p_communicate
+client_socket = None
+msgs = []
+
+def send():
+	global client_socket
+	def handle_return(event):
+		msg = entry.get()
+		response = msg.encode()
+		client_socket.sendall(response)
+		msgs.append(msg)
+		entry.delete(0, tk.END)
+
+	root = tk.Tk()
+
+	label = tk.Label(root, text="AEnter your message:")
+	label.pack()
+
+	entry = tk.Entry(root)
+	entry.pack()
+
+	entry.bind('<Return>', handle_return)
+
+	root.mainloop()
+
+	return msgs
+
+def listen():
+	global client_socket
+	HOST = 'localhost'
+	PORT = 12345
+	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server_socket.bind((HOST, PORT))
+	server_socket.listen()
+	
+	client_socket, client_address = server_socket.accept()
+	print(f'Connection from {client_address}')
+		
 	while True:
-		data = sock.recv(1024)
-		if not data:
-			break
-		print(f"Received: {data.decode()}")
 
-def get_input(sock):
-	while True:
-		user_input = input()
-		sock.sendall(user_input.encode())
+		# Receive data from the client
+		data = client_socket.recv(1024).decode()
+		print(f'Received: {data}')
 
-server_address = ('localhost', 12345)
+		# Send a response back to the client
+		#client_socket.sendall(data.encode())
+		#print(f"Sent: {data}")
 
-# Create a TCP/IP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		# Close the client socket
+		#client_socket.close()
+		
+thread1 = threading.Thread(target=send)
+thread2 = threading.Thread(target=listen)
 
-# Connect the socket to the server
-sock.connect(server_address)
+thread1.start()
+thread2.start()
 
-# Start the thread to receive messages
-receive_thread = threading.Thread(target=receive_message, args=(sock,))
-receive_thread.daemon = True
-receive_thread.start()
-
-# Start the thread to get input from the user and send messages
-input_thread = threading.Thread(target=get_input, args=(sock,))
-input_thread.daemon = True
-input_thread.start()
-
-# Wait for the input thread to complete (which will never happen)
-input_thread.join()
+thread1.join()
+thread2.join()
