@@ -65,8 +65,12 @@ def send():
 def listen():
 	global client_socket
 	your_name = ''
-	while your_name not in l_ip_address or your_name not in l_port:
+	while True:
 		your_name = input('Tell me your name in advance: ')
+		if your_name in l_ip_address and your_name in l_port:
+			break
+		else:
+			print("Error: Invalid name.")
 	
 	y_ip_address = l_ip_address[your_name]
 	y_port = l_port[your_name]
