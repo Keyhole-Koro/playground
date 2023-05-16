@@ -1,25 +1,25 @@
 import socket
 
-def send_image(image_path, host, port):
-	receiver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def send_file(file_path, host, port):
+	sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	try:
-		receiver_socket.connect((host, port))
+		sender_socket.connect((host, port))
 
-		with open(image_path, 'rb') as file:
-			image_data = file.read()
-		receiver_socket.sendall(image_data)
+		with open(file_path, 'rb') as file:
+			file_data = file.read()
+
+		sender_socket.sendall(file_data)
 
 		print("Image sent successfully.")
 	except Exception as e:
 		print("Error sending image:", e)
 	finally:
-		receiver_socket.close()
+		sender_socket.close()
 
 if __name__ == '__main__':
-	image_path = "C:/Users/kiho/OneDrive/ドキュメント/Liquia - Copy/materials/github-icon.png"
-
+	file_path = "C:/Users/kiho/OneDrive/デスクトップ/playground/Video Countdown 27 Digital   10 seconds.mp4"
 	host = 'localhost'
 	port = 42345
 
-	send_image(image_path, host, port)
+	send_file(file_path, host, port)
