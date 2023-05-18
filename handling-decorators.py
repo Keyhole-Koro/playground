@@ -3,6 +3,9 @@ import threading
 import socket
 from pathlib import Path
 import os
+import json
+import base64
+from datetime import datetime
 
 import blockchain
 import p2p_communicate as p2p
@@ -22,40 +25,38 @@ client_info = {
 
 bc = blockchain.Blockchain()
 
-def send_file(opponent_name = None, text = None, data = {}, sender = None):
-	try:
-		if opponent_name in client_info:
-			op_ip, op_port = client_info[opponent_name]
-			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
-				if data.split('.')[-1]:
-					file_extension = data.split('.')[-1]
-					with open(data, 'rb') as file:
-						print('data', data)
-						print('type(data)', type(data))
-						file_data = file.read()
-						print('file.read()', file.read())
-						print('file_data', file_data)
-						file_name = data
-						print('type(sender_name)', type(sender_name))
-						print('type(file_name)', type(file_name))
-						print('type(extension)', type(extension))
-						print('type(file_data)', type(file_data))
-						add_data = f'{sender_name}:{file_name}:{extension}:{str(file_data)}'
-						data = {
-						'text': 'Hello, server!',
-						'file_name': file_name,
-						'file_extension': file_extension,
-						'file_data': file_data
-						}
-						op_socket.sendall(add_data.encode())
-				add_data = f'{sender_name}:{extension}:{data}'
-				op_socket.sendall(add_data.encode())
-		else:
-			print(f"Opponent '{opponent_name}' does not exist in client_info.")
-	except KeyError:
-		print(f"Opponent '{opponent_name}' does not exist in client_info.")
-	except Exception as e:
-		print('Error:', e)
+import base64
+
+def send_file(opponent_name=None, text=None, file={}, sender=None):
+    try:
+        if opponent_name in client_info:
+            op_ip, op_port = client_info[opponent_name]
+            with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
+                file_name = file['file_name']
+                file_extension = file['file_extension']
+                file_b_data = file['file_b_data']
+                file_data_encoded = base64.b64encode(file_b_data).decode('utf-8')
+
+                all_data = {
+                    'sender': sender,
+                    'text': text,
+                    'file': {
+                        'file_name': file_name,
+                        'file_extension': file_extension,
+                        'file_b_data': file_data_encoded
+                    }
+                }
+
+                data_json = json.dumps(all_data)
+                data_bytes = data_json.encode('utf-8')
+                op_socket.sendall(data_bytes)
+        else:
+            print(f"Opponent '{opponent_name}' does not exist in client_info.")
+    except KeyError:
+        print(f"Opponent '{opponent_name}' does not exist in client_info.")
+    except Exception as e:
+        print('Error:', e)
+
 
 def listening(client_name):
 	ip_address, port = client_info[client_name]
@@ -65,76 +66,67 @@ def listening(client_name):
 	while True:
 		try:
 			client_socket, client_address = receive_socket.accept()
-			for name, address in client_info.items():
-				if address == client_address:
-					client_name = name
-					break
-			print('listening')
-			data = client_socket.recv(100000).decode()
-			print('listening1')
-			split_data = data.split(':',4)
-			sender_name = split_data[0]
-			file_name = split_data[2]
-			extension = split_data[3]
-			file_data = split_data[4]
-			print('listening2')
-			#file_data = "b'"+file_data+"'"
-			print(sender_name)
-			print(file_name)
-			print(extension)
-			print('file_data', file_data)
-			if extension == '':
-				print(sender_name, ':', data)
-			elif extension == 'png':
-				print('png')
-				with open('received_image.png', "wb") as file:
-					print('file.write(file_data)', file_data)
-					file.write(file_data)
+			data = json.loads(client_socket.recv(100000).decode())
+			sender = data['sender']
+			if data['text']:
+				text = data['text']
+			if data['file']:
+				file = data['file']
+				file_name = file['file_name']
+				file_extension = file['file_extension']
+				file_b_data = file['file_b_data']
+				
+				current_time = datetime.now()
+				formatted_time = str(current_time.strftime("%Y-%m-%d %H:%M:%S"))
+				
+				with open(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/{file_name}.{file_extension}", 'wb') as f:
+					f.write(base64.b64decode(file_b_data))
+			
 		except Exception:
 				pass
 
 def get_input(sender):
-    global client_info
-
-    def handle_submit():
-        opponent = entry.get()
-        text = entry2.get()
-        file_path = entry3.get()
-		file_data = b''
+	global client_info
+	def handle_submit():
+		opponent = entry.get()
+		text = entry2.get()
+		file_path = entry3.get()
+		file_b_data = b''
 		file_name = file_path.split('\\')[-1]
 		file_extension = file_name.split('.')[-1]
 		with open(file_path, 'rb') as fp:
-			file_data = fp.read()
+			file_b_data = fp.read()
 		
-        data = {
-				'file_name': file_name,
+		data = {
+				'file_name': file_name.split('.')[0],
 				'file_extension': file_extension,
-				'file_data': file_data
+				'file_b_data': file_b_data
 				}
+		
 		send_file(opponent, text, data, sender)
-        
-        entry.delete(0, tk.END)
-        entry2.delete(0, tk.END)
-        entry3.delete(0, tk.END)
+		
+		entry.delete(0, tk.END)
+		entry2.delete(0, tk.END)
+		entry3.delete(0, tk.END)
 
-    root = tk.Tk()
+	root = tk.Tk()
 
-    label = tk.Label(root, text="Enter your messages:")
-    label.pack()
+	label = tk.Label(root, text="Enter your messages:")
+	label.pack()
 
-    entry = tk.Entry(root)
-    entry.pack()
+	entry = tk.Entry(root)
+	entry.pack()
 
-    entry2 = tk.Entry(root)
-    entry2.pack()
+	entry2 = tk.Entry(root)
+	entry2.pack()
 
-    entry3 = tk.Entry(root)
-    entry3.pack()
+	entry3 = tk.Entry(root)
+	entry3.pack()
 
-    submit_button = tk.Button(root, text="Submit", command=handle_submit)
-    submit_button.pack()
+	submit_button = tk.Button(root, text="Send", command=handle_submit)
+	submit_button.pack()
 
-    root.mainloop()
+	root.mainloop()
 
 
 if __name__ == '__main__':

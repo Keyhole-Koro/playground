@@ -1,11 +1,16 @@
 import tkinter as tk
 import threading
 import socket
+from pathlib import Path
+import os
+import json
+import base64
+from datetime import datetime
 
 import blockchain
 import p2p_communicate as p2p
 
-client_info = {
+node = {
 	'user1': ('localhost', 42345),
 	'user2': ('localhost', 49000),
 	'user3': ('localhost', 48000),
@@ -17,81 +22,116 @@ client_info = {
 	'user9': ('localhost', 48345),
 	'user10': ('localhost', 49345)
 	}
+
 bc = blockchain.Blockchain()
 
-def send_data(opponent_name, data, sender_name):
+import base64
+
+def send_file(opponent_name=None, text=None, file={}, sender=None):
 	try:
-		if opponent_name in client_info:
-			op_ip, op_port = client_info[opponent_name]
+		if opponent_name in node:
+			op_ip, op_port = node[opponent_name]
 			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
-				if 'png' in data:
-					with open(data, 'rb') as file:
-						file_data = file.read()
-						op_socket.sendall(file_data)
-				op_socket.sendall(data.encode())
+				file_name = file['file_name']
+				file_extension = file['file_extension']
+				file_b_data = file['file_b_data']
+				file_data_encoded = base64.b64encode(file_b_data).decode('utf-8')
+
+				data = {
+					'sender': sender,
+					'text': text,
+					'file': {
+						'file_name': file_name,
+						'file_extension': file_extension,
+						'file_b_data': file_data_encoded
+					}
+				}
+
+				data_json = json.dumps(data)
+				data_bytes = data_json.encode('utf-8')
+				op_socket.sendall(data_bytes)
 		else:
-			print(f"Opponent '{opponent_name}' does not exist in client_info.")
+			print(f"Opponent '{opponent_name}' does not exist in node.")
 	except KeyError:
-		print(f"Opponent '{opponent_name}' does not exist in client_info.")
+		print(f"Opponent '{opponent_name}' does not exist in node.")
 	except Exception as e:
 		print('Error:', e)
+	except ValueError as v:
+		print('ValueError:', v)
 
-	
+
 def listening(client_name):
-	ip_address, port = client_info[client_name]
+	ip_address, port = node[client_name]
 	receive_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	receive_socket.bind((ip_address, port))
 	receive_socket.listen()
 	while True:
 		try:
 			client_socket, client_address = receive_socket.accept()
-			for name, address in client_info.items():
-				if address == client_address:
-					client_name = name
-					break
-			data = client_socket.recv(1024).decode()
-			print(client_name, ':', data)
+			data = json.loads(client_socket.recv(100000).decode())
+			sender = data['sender']
+			if data['text']:
+				text = data['text']
+			if data['file']:
+				file = data['file']
+				file_name = file['file_name']
+				file_extension = file['file_extension']
+				file_b_data = file['file_b_data']
+
+				with open(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/{file_name}.{file_extension}", 'wb') as f:
+					f.write(base64.b64decode(file_b_data))
+			
 		except Exception:
 				pass
 
-def get_input(user):
-	global client_info
-	def handle_return(event):
-		msg = entry.get()
-		if ':' in msg:
-			message = msg.split(":")
-			opponent_name = message[0]
-			data = message[1]
-			if opponent_name in client_info:
-				send_data(opponent_name, data, user)
-			elif opponent_name == 'all':
-				for client in client_info.keys():
-					if client != user:
-						send_data(client, data, user)
-					else:
-						pass
-			else:
-				print('user Not Found')
-		else:
-			print('invalid format')
+def get_input(sender):
+	global node
+	def handle_submit():
+		opponent = entry.get()
+		text = entry2.get()
+		file_path = entry3.get()
+		file_b_data = b''
+		file_name = file_path.split('\\')[-1]
+		file_extension = file_name.split('.')[-1]
+		with open(file_path, 'rb') as fp:
+			file_b_data = fp.read()
+		
+		data = {
+				'file_name': file_name.split('.')[0],
+				'file_extension': file_extension,
+				'file_b_data': file_b_data
+				}
+		
+		send_file(opponent, text, data, sender)
+		
 		entry.delete(0, tk.END)
+		entry2.delete(0, tk.END)
+		entry3.delete(0, tk.END)
 
 	root = tk.Tk()
 
-	label = tk.Label(root, text="Enter your message:")
+	label = tk.Label(root, text="Enter your messages:")
 	label.pack()
 
 	entry = tk.Entry(root)
 	entry.pack()
 
-	entry.bind('<Return>', handle_return)
+	entry2 = tk.Entry(root)
+	entry2.pack()
+
+	entry3 = tk.Entry(root)
+	entry3.pack()
+
+	submit_button = tk.Button(root, text="Send", command=handle_submit)
+	submit_button.pack()
 
 	root.mainloop()
+
 
 if __name__ == '__main__':
 	while True:
 		user = input('Enter your name:')
-		if user in client_info:
+		if user in node.keys():
 			break
 		else:
 			print('Client not found')
