@@ -15,7 +15,7 @@ def receive_video(host, port, save_path):
 			while True:
 				
 				print("Connected:", client_address)
-				data = client_socket.recv(10010)
+				data = client_socket.recv(100000)
 				print(i,'----------------------------------')
 				if not data:
 					print('no data')

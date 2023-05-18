@@ -8,7 +8,7 @@ def send_file(file_path, host, port):
 
 		with open(file_path, 'rb') as file:
 			file_data = file.read()
-			chunk_size = 10000
+			chunk_size = 100000
 			split_count = len(file_data)/chunk_size
 			chunks = divide_into_chunks(file_data, chunk_size)
 			for i in range(int(split_count)+1):
