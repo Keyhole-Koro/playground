@@ -25,35 +25,43 @@ node = {
 
 bc = blockchain.Blockchain()
 
-import base64
-
+class handle_huge_file:
+	def __init__(self, sender, key, local_path, timestamp):
+		self.sender = sender
+		self.receiver = None
+		self.key = key
+		self.local_path = local_path
+		self.timestamp = timestamp
+		
 def send_file(opponent_name=None, text=None, file={}, sender=None):
 	try:
-		if opponent_name in node:
+		if opponent_name in node.keys():
 			op_ip, op_port = node[opponent_name]
 			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
-				file_name = file['file_name']
-				file_extension = file['file_extension']
-				file_b_data = file['file_b_data']
-				file_data_encoded = base64.b64encode(file_b_data).decode('utf-8')
-
-				data = {
-					'sender': sender,
-					'text': text,
-					'file': {
+				if file:
+					file_name = file['file_name']
+					file_extension = file['file_extension']
+					file_b_data = file['file_b_data']
+					file_data_encoded = base64.b64encode(file_b_data).decode('utf-8')
+					file = {
 						'file_name': file_name,
 						'file_extension': file_extension,
 						'file_b_data': file_data_encoded
 					}
+				else:
+					pass
+				data = {
+					'sender': sender,
+					'text': text,
+					'file': file
 				}
-
 				data_json = json.dumps(data)
 				data_bytes = data_json.encode('utf-8')
 				op_socket.sendall(data_bytes)
 		else:
 			print(f"Opponent '{opponent_name}' does not exist in node.")
-	except KeyError:
-		print(f"Opponent '{opponent_name}' does not exist in node.")
+	except KeyError as e:
+		print(f"KeyError: '{e}' does not exist.")
 	except Exception as e:
 		print('Error:', e)
 	except ValueError as v:
@@ -72,6 +80,7 @@ def listening(client_name):
 			sender = data['sender']
 			if data['text']:
 				text = data['text']
+				print(f'{sender}:{text}')
 			if data['file']:
 				file = data['file']
 				file_name = file['file_name']
@@ -80,34 +89,61 @@ def listening(client_name):
 
 				with open(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/{file_name}.{file_extension}", 'wb') as f:
 					f.write(base64.b64decode(file_b_data))
-			
+
 		except Exception:
 				pass
 
-def get_input(sender):
-	global node
-	def handle_submit():
-		opponent = entry.get()
-		text = entry2.get()
-		file_path = entry3.get()
-		file_b_data = b''
-		file_name = file_path.split('\\')[-1]
-		file_extension = file_name.split('.')[-1]
+def pull_request():
+	pass
+
+def arrange_data(file_path, file_b_data):
+	file_name_ext = file_path.split('\\')[-1]
+	file_name = file_name_ext.split('.')[0]
+	file_extension = file_name_ext.split('.')[-1]
+
+	data = {
+		'file_name': file_name,
+		'file_extension': file_extension,
+		'file_b_data': file_b_data
+	}
+	return data
+
+def file_part():
+	pass
+
+def handle_huge_file(file_path, file_b_data):
+	chunks = divide_into_chunks(file_b_data, 90000)
+	for chunk in chunks:
+		pass
+
+def divide_into_chunks(string, chunk_size):
+	chunks = [string[i:i+chunk_size] for i in range(0, len(string), chunk_size)]
+	return chunks
+
+def handle_submit(entry, entry2, entry3, sender):
+	opponent = entry.get().strip()
+	text = entry2.get()
+	file_path = entry3.get().strip()
+
+	if file_path:
 		with open(file_path, 'rb') as fp:
 			file_b_data = fp.read()
-		
-		data = {
-				'file_name': file_name.split('.')[0],
-				'file_extension': file_extension,
-				'file_b_data': file_b_data
-				}
-		
-		send_file(opponent, text, data, sender)
-		
-		entry.delete(0, tk.END)
-		entry2.delete(0, tk.END)
-		entry3.delete(0, tk.END)
+		if len(file_b_data) < 90000:
+			data = arrange_data(file_path, file_b_data)
+		else:
+			handle_huge_file(file_path, file_b_data)
+	else:
+		print('no file_path')
+		data = {}
 
+	send_file(opponent, text, data, sender)
+
+	#entry.delete(0, tk.END)
+	entry2.delete(0, tk.END)
+	entry3.delete(0, tk.END)
+
+
+def get_input(sender):
 	root = tk.Tk()
 
 	label = tk.Label(root, text="Enter your messages:")
@@ -122,11 +158,11 @@ def get_input(sender):
 	entry3 = tk.Entry(root)
 	entry3.pack()
 
-	submit_button = tk.Button(root, text="Send", command=handle_submit)
+	submit_button = tk.Button(root, text="Send",
+							  command=lambda: handle_submit(entry, entry2, entry3, sender))
 	submit_button.pack()
 
 	root.mainloop()
-
 
 if __name__ == '__main__':
 	while True:
