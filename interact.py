@@ -8,6 +8,7 @@ import base64
 from datetime import datetime
 
 import blockchain
+import database as db
 import p2p_communicate as p2p
 
 node = {
@@ -24,9 +25,8 @@ node = {
 	}
 
 bc = blockchain.Blockchain()
+db = db.Database()
 
-
-		
 def send_file(opponent_name=None, text=None, file={}, sender=None):
 	try:
 		if opponent_name in node.keys():
@@ -52,6 +52,7 @@ def send_file(opponent_name=None, text=None, file={}, sender=None):
 				data_json = json.dumps(data)
 				data_bytes = data_json.encode('utf-8')
 				op_socket.sendall(data_bytes)
+				bc.add_block(data_bytes)
 		else:
 			print(f"Opponent '{opponent_name}' does not exist in node.")
 	except KeyError as e:
@@ -72,6 +73,8 @@ def listening(client_name):
 			client_socket, client_address = receive_socket.accept()
 			data = json.loads(client_socket.recv(100000).decode())
 			sender = data['sender']
+			text = None
+			file = None
 			if data['text']:
 				text = data['text']
 				print(f'{sender}:{text}')
@@ -83,7 +86,10 @@ def listening(client_name):
 
 				with open(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/{file_name}.{file_extension}", 'wb') as f:
 					f.write(base64.b64decode(file_b_data))
-
+			print('insert')
+			db.insert(sender = sender, text = text, file = file)
+			print('insert1')
+			print(db.get(text, file))
 		except Exception:
 				pass
 
@@ -127,7 +133,6 @@ def handle_submit(entry, entry2, entry3, sender):
 		else:
 			handle_huge_file(file_path, file_b_data)
 	else:
-		print('no file_path')
 		data = {}
 
 	send_file(opponent, text, data, sender)

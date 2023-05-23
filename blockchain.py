@@ -9,13 +9,13 @@ def add_timestamp():
 
 
 class Block:
-	def __init__(self, index, timestamp, msg, previous_hash):
+	def __init__(self, index, timestamp, msg, file, hashed_number, previous_hash):
 		self.index = index
 		self.timestamp = timestamp
 		self.msg = msg
-		self.file_data = None
+		self.file_data = file
+		self.hashed_number = hashed_number
 		self.previous_hash = previous_hash
-		self.hashed_number = 0
 		self.hash = self.calculate_hash()
 
 	def calculate_hash(self):
@@ -37,16 +37,20 @@ class Blockchain:
 		return number
 
 	def create_genesis_block(self):
-		return Block(0, add_timestamp(), "Genesis Block", "0")
+		return Block(0, add_timestamp(), None, None, "Genesis Block", "0")
 
-	def create_block(self, msg=None, file=None):
-		index = len(self.chain)
-		previous_hash = self.chain[-1].hash
-		new_block = Block(index, add_timestamp(), msg, hash_to_number(msg, file), previous_hash)
+	def create_block(self, data_bytes):
+		data = json.loads(data_bytes.decode('utf-8'))
+		msg = data['text']
+		file = data['file']
+		new_block = Block(len(self.chain), add_timestamp(), msg, file, self.hash_to_number(msg, str(file)), self.chain[-1].hash)
 		return new_block
 
-	def add_block(self, msg=None, file=None):
-		new_block = self.create_block(msg)
+	def add_block(self, data_bytes):
+		data = json.loads(data_bytes.decode('utf-8'))
+		msg = data['text']
+		file = data['file']
+		new_block = self.create_block(data_bytes)
 		self.chain.append(new_block)
 
 	def get_block(self, hash):
