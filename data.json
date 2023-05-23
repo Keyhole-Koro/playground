@@ -1,1 +1,8 @@
-{10: {'timestamp': '2023-05-23 23:27:00', 'text': 'text', 'file': {'name': 'Keyhole', 'data': "b'gh9tw43htt"}, 'data_key': 96333, 'sender': 'sender'}}
+{
+  "sender": "sender",
+  "text": "text",
+  "file": {
+    "name": "Keyhole",
+    "data": "b'gh9tw43htt'"
+  }
+}

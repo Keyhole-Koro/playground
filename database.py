@@ -1,4 +1,5 @@
 import hashlib
+import json
 
 import blockchain as bc
 
@@ -16,7 +17,7 @@ class Database:
 		dataset = {
 			'timestamp': bc.add_timestamp(),
 			'text': None,
-			'file': None,
+			'file': None,#change to file path
 			'data_key': hash_to_num(1000, 10000, data),
 			'sender': None
 		}
@@ -25,12 +26,17 @@ class Database:
 		
 	def insert(self, **kwargs):
 		key = self.key(kwargs)
-		self.database[key] = self.create_data(kwargs)
-
+		try:
+			with open('data.json') as file:
+				data = json.load(file)
+				data[key] = self.create_data(kwargs)
+		except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
+			print(f"Error loading JSON: {e}")
+			data = {}
+		print('data', data)
+		
 	def get(self, **kwargs):
 		key = self.key(kwargs)
-		with open('data.json', 'w') as db:
-			db.write(str(self.database))
 		return self.database.get(key)
 
 def hash_to_num(range_min, range_max, *args):
@@ -48,7 +54,7 @@ if __name__ == '__main__':
 	db = Database()
 	file = {
 		'name': 'Keyhole',
-		'data': "b'gh9tw43htt"
+		'data': "b'gh56h56h5"
 	}
 	db.insert(sender = 'sender', text = 'text', file = file)
 	print(db.get(sender = 'sender', text = 'text', file = file))

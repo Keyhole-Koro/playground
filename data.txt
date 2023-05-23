@@ -1,1 +1,0 @@
-{23: {'timestamp': '2023-05-23 23:22:01', 'text': 'text', 'file': 'file', 'data_key': 85083, 'sender': 'sender'}}
