@@ -25,13 +25,7 @@ node = {
 
 bc = blockchain.Blockchain()
 
-class handle_huge_file:
-	def __init__(self, sender, key, local_path, timestamp):
-		self.sender = sender
-		self.receiver = None
-		self.key = key
-		self.local_path = local_path
-		self.timestamp = timestamp
+
 		
 def send_file(opponent_name=None, text=None, file={}, sender=None):
 	try:
