@@ -1,5 +1,6 @@
 import hashlib
 import json
+import base64
 
 import blockchain as bc
 
@@ -26,19 +27,33 @@ class Database:
 		
 	def insert(self, **kwargs):
 		key = self.key(kwargs)
-		try:
-			with open('data.json') as file:
-				data = json.load(file)
-				data[key] = self.create_data(kwargs)
-		except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
-			print(f"Error loading JSON: {e}")
-			data = {}
-		print('data', data)
+		if kwargs['file']:
+			file_ex_b_data = kwargs
+			nested_file = file_ex_b_data.get('file')
+			nested_file.pop('file_b_data')
+			self.write_to_json(key, file_ex_b_data)
 		
 	def get(self, **kwargs):
 		key = self.key(kwargs)
 		return self.database.get(key)
-
+	
+	def write_to_json(self, key, file_details):
+		try:
+			with open('C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/data.json') as file:
+				data = json.load(file)
+				data[key] = self.create_data(file_details)
+		except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
+			print(f"Error loading JSON: {e}")
+			data = {}
+		print('data', data)
+#doesnt work
+def saved_path(file):
+	print('file')
+	file_path = f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/files/{file["file_name"]}.{file["file_extension"]}'
+	print('file_path', file_path)
+	with open(file_path, 'wb') as new_file:
+		new_file.write(base64.b64decode(file['file_b_data']))
+	return file_path
 def hash_to_num(range_min, range_max, *args):
 	number = 0
 	for arg in args:
@@ -51,6 +66,13 @@ def hash_to_num(range_min, range_max, *args):
 	return number
 
 if __name__ == '__main__':
+	file = {
+		'file_name': 'file_name',
+		'file_extension': 'png',
+		'file_b_data': b'file_data_encoded'
+	}
+	saved_path(file)
+	"""
 	db = Database()
 	file = {
 		'name': 'Keyhole',
@@ -58,3 +80,4 @@ if __name__ == '__main__':
 	}
 	db.insert(sender = 'sender', text = 'text', file = file)
 	print(db.get(sender = 'sender', text = 'text', file = file))
+	"""

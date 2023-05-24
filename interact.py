@@ -27,7 +27,7 @@ node = {
 bc = blockchain.Blockchain()
 db = db.Database()
 
-def send_file(opponent_name=None, text=None, file={}, sender=None):
+def send(opponent_name=None, text=None, file=[], sender=None):
 	try:
 		if opponent_name in node.keys():
 			op_ip, op_port = node[opponent_name]
@@ -62,6 +62,8 @@ def send_file(opponent_name=None, text=None, file={}, sender=None):
 	except ValueError as v:
 		print('ValueError:', v)
 
+def push_data(opponent_name=None, text=None, file=[], sender=None):
+	pass
 
 def listening(client_name):
 	ip_address, port = node[client_name]
@@ -71,7 +73,7 @@ def listening(client_name):
 	while True:
 		try:
 			client_socket, client_address = receive_socket.accept()
-			data = json.loads(client_socket.recv(100000).decode())
+			data = json.loads(client_socket.recv(1000000).decode())
 			sender = data['sender']
 			text = None
 			file = None
@@ -83,9 +85,10 @@ def listening(client_name):
 				file_name = file['file_name']
 				file_extension = file['file_extension']
 				file_b_data = file['file_b_data']
-
-				with open(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/{file_name}.{file_extension}", 'wb') as f:
-					f.write(base64.b64decode(file_b_data))
+				file_path = f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/files/{file["file_name"]}.{file["file_extension"]}'
+				with open(file_path, 'wb') as new_file:
+					new_file.write(base64.b64decode(file['file_b_data']))
+				file['file_path'] = file_path
 			print('insert')
 			db.insert(sender = sender, text = text, file = file)
 			print('insert1')
@@ -101,20 +104,26 @@ def arrange_data(file_path, file_b_data):
 	file_name = file_name_ext.split('.')[0]
 	file_extension = file_name_ext.split('.')[-1]
 
-	data = {
+	file = {
 		'file_name': file_name,
 		'file_extension': file_extension,
 		'file_b_data': file_b_data
 	}
-	return data
+	return file
 
 def file_part():
 	pass
 
-def handle_huge_file(file_path, file_b_data):
+def split_file(file_path, file_b_data):
 	chunks = divide_into_chunks(file_b_data, 90000)
-	for chunk in chunks:
-		pass
+	file = arrange_data(file_path, None)
+	l_files = []
+	for c in range(len(chunks)):
+		chunk = chunks[c]
+		file['part_num'] = c
+		file['file_b_data'] = chunk
+		files.append(file)
+	return l_files
 
 def divide_into_chunks(string, chunk_size):
 	chunks = [string[i:i+chunk_size] for i in range(0, len(string), chunk_size)]
@@ -123,19 +132,20 @@ def divide_into_chunks(string, chunk_size):
 def handle_submit(entry, entry2, entry3, sender):
 	opponent = entry.get().strip()
 	text = entry2.get()
-	file_path = entry3.get().strip()
+	file_path = entry3.get().strip().replace('"', '')
 
 	if file_path:
 		with open(file_path, 'rb') as fp:
 			file_b_data = fp.read()
+			print(len(file_b_data))
 		if len(file_b_data) < 90000:
-			data = arrange_data(file_path, file_b_data)
+			l_file = split_file(file_path, file_b_data)
 		else:
-			handle_huge_file(file_path, file_b_data)
+			#file = handle_huge_file(file_path, file_b_data)
+			l_file = split_file(file_path, file_b_data)
 	else:
-		data = {}
-
-	send_file(opponent, text, data, sender)
+		l_file = []
+	send(opponent, text, l_file, sender)
 
 	#entry.delete(0, tk.END)
 	entry2.delete(0, tk.END)
