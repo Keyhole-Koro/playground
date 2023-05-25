@@ -62,6 +62,7 @@ def send(opponent_name=None, text=None, file=[], sender=None):
 	except ValueError as v:
 		print('ValueError:', v)
 
+#have yet to handle list
 def transmit_data(opponent_name=None, text=None, l_file=[], sender=None):
 	try:
 		if opponent_name in node.keys():
