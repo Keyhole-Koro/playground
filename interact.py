@@ -62,8 +62,23 @@ def send(opponent_name=None, text=None, file=[], sender=None):
 	except ValueError as v:
 		print('ValueError:', v)
 
-def push_data(opponent_name=None, text=None, file=[], sender=None):
-	pass
+def transmit_data(opponent_name=None, text=None, l_file=[], sender=None):
+	try:
+		if opponent_name in node.keys():
+			op_ip, op_port = node[opponent_name]
+			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
+				data = sort_file_base64str(opponent_name, text, file, sender)
+				data_bytes = convert_strdict_bytes(data)
+				op_socket.sendall(data_bytes)
+				bc.add_block(data_bytes)
+		else:
+			print(f"Opponent '{opponent_name}' does not exist in node.")
+	except KeyError as e:
+		print(f"KeyError: '{e}' does not exist.")
+	except Exception as e:
+		print('Error:', e)
+	except ValueError as v:
+		print('ValueError:', v)
 
 def listening(client_name):
 	ip_address, port = node[client_name]
@@ -96,10 +111,34 @@ def listening(client_name):
 		except Exception:
 				pass
 
+
+def convert_strdict_bytes(string:str):
+	string_json = json.dumps(string)
+	string_bytes = string_json.encode('utf-8')
+	return string_bytes
+
+#make more abstract(arg kwarg)
+def sort_file_base64str(opponent_name, text, file:list, sender):->list
+	file_name = file['file_name']
+	file_extension = file['file_extension']
+	file_b_data = file['file_b_data']
+	file_data_encoded = base64.b64encode(file_b_data).decode('utf-8')
+	sorted_file = {
+		'file_name': file_name,
+		'file_extension': file_extension,
+		'file_b_data': file_data_encoded
+	}
+	sorted_data = {
+		'sender': sender,
+		'text': text,
+		'file': sorted_file
+	}
+	return sorted_data
+
 def pull_request():
 	pass
 
-def arrange_data(file_path, file_b_data):
+def arrange_data(file_path, file_b_data):->dict
 	file_name_ext = file_path.split('\\')[-1]
 	file_name = file_name_ext.split('.')[0]
 	file_extension = file_name_ext.split('.')[-1]
@@ -114,18 +153,18 @@ def arrange_data(file_path, file_b_data):
 def file_part():
 	pass
 
-def split_file(file_path, file_b_data):
+def split_file(file_path, file_b_data):->list
 	chunks = divide_into_chunks(file_b_data, 90000)
 	file = arrange_data(file_path, None)
-	l_files = []
+	files = []
 	for c in range(len(chunks)):
 		chunk = chunks[c]
 		file['part_num'] = c
 		file['file_b_data'] = chunk
 		files.append(file)
-	return l_files
+	return files
 
-def divide_into_chunks(string, chunk_size):
+def divide_into_chunks(string, chunk_size):->list
 	chunks = [string[i:i+chunk_size] for i in range(0, len(string), chunk_size)]
 	return chunks
 
