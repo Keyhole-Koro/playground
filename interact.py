@@ -6,6 +6,7 @@ import os
 import json
 import base64
 from datetime import datetime
+import random
 
 import blockchain
 import database as db
@@ -62,14 +63,26 @@ def send(opponent_name=None, text=None, file=[], sender=None):
 	except ValueError as v:
 		print('ValueError:', v)
 
+def dispatch_request(l_file=[], sender=None):
+	l_node_values = list(node.values())
+	op_ip, op_port = l_node_values[random.randint(1, len(l_node_values))]
+	l_file['file_b_data'] = None
+	file_profile = l_file
+	request = {
+		'sender': sender,
+		'file': file_profile,
+		'timestamp': blockchain.add_timestamp()
+	}
+	
+	with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
+		op_socket.sendall(data_bytes)
 #have yet to handle list
-def transmit_data(opponent_name=None, text=None, l_file=[], sender=None):
+def transmit_data(text=None, l_file=[], sender=None):
 	try:
-		if opponent_name in node.keys():
-			op_ip, op_port = node[opponent_name]
+		for part in range(len(l_file)):
+			data = sort_file_base64str(opponent_name, text, file, sender)
+			data_bytes = convert_strdict_bytes(data)
 			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
-				data = sort_file_base64str(opponent_name, text, file, sender)
-				data_bytes = convert_strdict_bytes(data)
 				op_socket.sendall(data_bytes)
 				bc.add_block(data_bytes)
 		else:

@@ -28,10 +28,10 @@ class Database:
 	def insert(self, **kwargs):
 		key = self.key(kwargs)
 		if kwargs['file']:
-			file_ex_b_data = kwargs
-			nested_file = file_ex_b_data.get('file')
+			d_file_ex_b_data = kwargs
+			nested_file = d_file_ex_b_data.get('file')
 			nested_file.pop('file_b_data')
-			self.write_to_json(key, file_ex_b_data)
+			self.write_to_json(key, d_file_ex_b_data)
 		
 	def get(self, **kwargs):
 		key = self.key(kwargs)
