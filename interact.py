@@ -12,7 +12,7 @@ import blockchain
 import database as db
 import p2p_communicate as p2p
 
-node = {
+nodes = {
 	'user1': ('localhost', 42345),
 	'user2': ('localhost', 49000),
 	'user3': ('localhost', 48000),
@@ -30,8 +30,8 @@ db = db.Database()
 
 def send(opponent_name=None, text=None, file=[], sender=None):
 	try:
-		if opponent_name in node.keys():
-			op_ip, op_port = node[opponent_name]
+		if opponent_name in nodes.keys():
+			op_ip, op_port = nodes[opponent_name]
 			with p2p.p2pconnect_to(op_ip, op_port) as op_socket:
 				if file:
 					file_name = file['file_name']
@@ -64,7 +64,7 @@ def send(opponent_name=None, text=None, file=[], sender=None):
 		print('ValueError:', v)
 
 def dispatch_request(l_file=[], sender=None):
-	l_node_values = list(node.values())
+	l_node_values = list(nodes.values())
 	op_ip, op_port = l_node_values[random.randint(1, len(l_node_values))]
 	l_file['file_b_data'] = None
 	file_profile = l_file
@@ -95,7 +95,7 @@ def transmit_data(text=None, l_file=[], sender=None):
 		print('ValueError:', v)
 
 def listening(client_name):
-	ip_address, port = node[client_name]
+	ip_address, port = nodes[client_name]
 	receive_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	receive_socket.bind((ip_address, port))
 	receive_socket.listen()
@@ -229,7 +229,7 @@ def get_input(sender):
 if __name__ == '__main__':
 	while True:
 		user = input('Enter your name:')
-		if user in node.keys():
+		if user in nodes.keys():
 			break
 		else:
 			print('Client not found')
