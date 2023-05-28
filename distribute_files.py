@@ -15,20 +15,23 @@ import p2p_communicate as p2p
 bc = blockchain.Blockchain()
 db = db.Database()
 
-def setup_nodes():
+opponent_nodes = {}
+    
+def setup_nodes(number_nodes):
     keys = []
     values = []
-    for i in range(20):
-        key = f'key{i + 1}'
+    for i in range(number_nodes):
+        key = f'user{i + 1}'
         value = random.randint(40000, 49999)
         if i > 0 and value in values:
         # Regenerate a new value
             while value == values[-1]:
                 value = random.randint(40000, 49999)
+        arranged_value = ['localhost', value]
         keys.append(key)
-        values.append(value)
-    for key, value in key_value_pairs.items():
-    print(f'{key}: {value}')
+        values.append(arranged_value)
+    key_value_pairs = {key: values[i % len(values)] for i, key in enumerate(keys)}
+    return key_value_pairs
 
 def convert_strdict_bytes(string:str):
     string_json = json.dumps(string)
@@ -36,7 +39,7 @@ def convert_strdict_bytes(string:str):
     return string_bytes
 
 #make more abstract(arg kwarg)
-def sort_file_base64str(opponent_name, text, file:list, sender):->list
+def sort_file_base64str(opponent_name, text, file:list, sender)->list:
     file_name = file['file_name']
     file_extension = file['file_extension']
     file_b_data = file['file_b_data']
@@ -56,7 +59,7 @@ def sort_file_base64str(opponent_name, text, file:list, sender):->list
 def pull_request():
     pass
 
-def arrange_data(file_path, file_b_data):->dict
+def arrange_data(file_path, file_b_data)->dict:
     file_name_ext = file_path.split('\\')[-1]
     file_name = file_name_ext.split('.')[0]
     file_extension = file_name_ext.split('.')[-1]
@@ -71,7 +74,7 @@ def arrange_data(file_path, file_b_data):->dict
 def file_part():
     pass
 
-def split_file(file_path, file_b_data):->list
+def split_file(file_path, file_b_data)->list:
     chunks = divide_into_chunks(file_b_data, 90000)
     file = arrange_data(file_path, None)
     files = []
@@ -82,14 +85,17 @@ def split_file(file_path, file_b_data):->list
         files.append(file)
     return files
 
-def divide_into_chunks(string, chunk_size):->list
+def divide_into_chunks(string, chunk_size)->list:
     chunks = [string[i:i+chunk_size] for i in range(0, len(string), chunk_size)]
     return chunks
 
-def listening(client_name):
-    ip_address, port = nodes[client_name]
+def put_out(node):
+    return opponent_nodes[node]
+    
+def listening(address):
+    ip, port = addresses[address]
     receive_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    receive_socket.bind((ip_address, port))
+    receive_socket.bind((ip, port))
     receive_socket.listen()
     while True:
         try:
@@ -103,27 +109,28 @@ def listening(client_name):
                 print(f'{sender}:{text}')
             if data['file']:
                 file = data['file']
-                file_name = file['file_name']
-                file_extension = file['file_extension']
-                file_b_data = file['file_b_data']
                 file_path = f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/files/{file["file_name"]}.{file["file_extension"]}'
                 with open(file_path, 'wb') as new_file:
                     new_file.write(base64.b64decode(file['file_b_data']))
                 file['file_path'] = file_path
-            print('insert')
             db.insert(sender = sender, text = text, file = file)
-            print('insert1')
             print(db.get(text, file))
         except Exception:
                 pass
 
 def listen_request(client_name):
-    ip_address, port = nodes[client_name]
+    ip_address, port = addresses[client_name]
+    print(client_name, ip_address, port)
+    print('listen_request')
     receive_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print('listen_request1')
     receive_socket.bind((ip_address, port))
+    print('listen_request2')
     receive_socket.listen()
+    print('listen_request3')
     while True:
         try:
+            print('listen_request4')
             client_socket, client_address = receive_socket.accept()
             data = json.loads(client_socket.recv(1000).decode())
             sender = data['sender']
@@ -147,7 +154,7 @@ def dispatch_request(l_file=[], sender=None):
         'timestamp': blockchain.add_timestamp()
     }
     spread_count = 0
-    for op_ip, op_port in nodes.values:
+    for op_ip, op_port in put_out(sender):
         if spread_count > 10:
             break
         try:
@@ -180,11 +187,22 @@ def transmit_data(text=None, l_file=[], sender=None):
         print('ValueError:', v)
 
 if __name__ == '__main__':
-    nodes = {key: values[i % len(values)] for i, key in enumerate(keys)}
-    for nodekey in nodes.keys():
-        listening_thread = threading.Thread(target=listening, args=(node,))
+    addresses = setup_nodes(20)
+    for key, value in addresses.items():
+        node_values = []
+        for address in addresses:
+            probability = random.randint(1, 3)
+            if probability == 1 and key != address:
+                node_values.append(key)
+        opponent_nodes[key] = node_values
+    listening_threads = []
+    for address in addresses.keys():
+        listening_thread = threading.Thread(target=listen_request, args=(address,))
         listening_thread.start()
-        listening_thread.join()
+        listening_threads.append(listening_thread)
+    for thread in listening_threads:
+        thread.join()
+    print('passed')
     user = {
     'ip':'localhost',
     'port':50000
