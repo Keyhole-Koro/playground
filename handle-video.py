@@ -31,7 +31,9 @@ def play_video(video_path):
 	cap.release()
 	cv2.destroyAllWindows()
 
-def separate_video(video_path, output_directory):
+import cv2
+
+def divide_video(video_path, output_directory, duration):
 	# Open the video file
 	video = cv2.VideoCapture(video_path)
 
@@ -48,31 +50,45 @@ def separate_video(video_path, output_directory):
 	# Initialize variables
 	frame_count = 0
 	success = True
+	video_count = 1
+	frame_rate = int(video.get(cv2.CAP_PROP_FPS))
 
-	# Read frames from the video and save them as images
+	# Create a VideoWriter object for the first output video
+	output_path = os.path.join(output_directory, f"output_{video_count}.avi")
+	fourcc = cv2.VideoWriter_fourcc(*"XVID")
+	writer = cv2.VideoWriter(output_path, fourcc, frame_rate, (int(video.get(3)), int(video.get(4))))
+
+	# Read frames from the video and save them into smaller videos
 	while success:
 		# Read the next frame
 		success, frame = video.read()
 
-		# Save the frame as an image
+		# Write the frame to the current output video
 		if success:
-			frame_path = os.path.join(output_directory, f"frame_{frame_count}.jpg")
-			cv2.imwrite(frame_path, frame)
+			writer.write(frame)
 			frame_count += 1
 
-	# Release the video file
+		# Check if the duration limit has been reached
+		if frame_count == duration * frame_rate:
+			# Release the current output video
+			writer.release()
+
+			# Start a new output video
+			video_count += 1
+			output_path = os.path.join(output_directory, f"output_{video_count}.avi")
+			writer = cv2.VideoWriter(output_path, fourcc, frame_rate, (int(video.get(3)), int(video.get(4))))
+			frame_count = 0
+
+	# Release the video file and the last output video
 	video.release()
-	print("Video separation completed.")
+	writer.release()
+	print("Video division completed.")
+
+video_file = "C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/files/Reol - 綺羅綺羅  GLITTER Music Video.mp4"
 
 # Example usage
 video_path = "path/to/video.mp4"
-output_directory = "output_frames"
-video_file = "C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/files/Reol - 綺羅綺羅  GLITTER Music Video.mp4"
-separate_video(video_file, output_directory)
+output_directory = "output_videos"
+duration = 10  # Duration of each output video in seconds
+divide_video(video_file, output_directory, duration)
 
-# Usage example
-input_file = "input_video.mp4"
-output_prefix = "output_segment"
-segment_duration = 10  # Duration of each segment in seconds
-
-#split_video(video_file, output_prefix, segment_duration)
