@@ -7,15 +7,18 @@ import json
 import base64
 from datetime import datetime
 import random
+import traceback
 
 import blockchain
 import database as db
 import p2p_communicate as p2p
+import arrange_data
 
 bc = blockchain.Blockchain()
 db = db.Database()
 
 opponent_nodes = {}
+addresses = {}
     
 def setup_nodes(number_nodes):
     keys = []
@@ -89,8 +92,11 @@ def divide_into_chunks(string, chunk_size)->list:
     chunks = [string[i:i+chunk_size] for i in range(0, len(string), chunk_size)]
     return chunks
 
-def put_out(node):
-    return opponent_nodes[node]
+def put_out_address(node):
+    l_address = []
+    for name in opponent_nodes[node]:
+        l_address.append(addresses[opponent_name])
+    return l_address
     
 def listening(address):
     ip, port = addresses[address]
@@ -121,40 +127,28 @@ def listening(address):
 def listen_request(client_name):
     ip_address, port = addresses[client_name]
     print(client_name, ip_address, port)
-    print('listen_request')
     receive_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print('listen_request1')
     receive_socket.bind((ip_address, port))
-    print('listen_request2')
     receive_socket.listen()
-    print('listen_request3')
     while True:
         try:
-            print('listen_request4')
             client_socket, client_address = receive_socket.accept()
             data = json.loads(client_socket.recv(1000).decode())
             sender = data['sender']
-            text = None
-            file = None
-            if data['text']:
-                text = data['text']
-                print(f'{sender}:{text}')
-            if data['file']:
-                file = data['file']
-                file_name = file['file_name']
-                file_extension = file['file_extension']
-        except Exception:
-                pass
+            print(data)
+        except Exception as e:
+            traceback.print_exc()
 
-def dispatch_request(l_file=[], sender=None):
+def dispatch_request(l_file=[], sender_name=None):
     request = {
-        'sender': sender,
+        'sender': sender_name,
         'carrier': None,
         'file': l_file,
         'timestamp': blockchain.add_timestamp()
     }
     spread_count = 0
-    for op_ip, op_port in put_out(sender):
+    for op_ip, op_port in put_out_opponent(sender_name):
+        print(op_ip, op_port)
         if spread_count > 10:
             break
         try:
@@ -163,7 +157,9 @@ def dispatch_request(l_file=[], sender=None):
                 'ip': op_ip,
                 'port': op_port
                 }
-                op_socket.sendall(request)
+                json_request = json.dumps(request)
+                b_request = json_request.encode('utf-8')
+                op_socket.sendall(b_request)
             spread_count += 1
         except socket.error as e:
             print(f"Error connecting to node {op_ip}:{op_port}: {e}")
@@ -200,13 +196,15 @@ if __name__ == '__main__':
         listening_thread = threading.Thread(target=listen_request, args=(address,))
         listening_thread.start()
         listening_threads.append(listening_thread)
-    for thread in listening_threads:
-        thread.join()
+    
     print('passed')
     user = {
     'ip':'localhost',
     'port':50000
     }
+    user = 'user1'
     file_path = "/Users/katsukawakiho/Desktop/blockchain-playground/playground/received_video2.mp4"
     request = arrange_data(file_path, None)
     dispatch_request(request, user)
+    for thread in listening_threads:
+        thread.join()
