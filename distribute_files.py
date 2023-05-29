@@ -144,6 +144,7 @@ def dispatch_request(l_file=[], sender_name=None):
         'sender': sender_name,
         'carrier': None,
         'file': l_file,
+        'key': 'not yet',
         'timestamp': blockchain.add_timestamp()
     }
     spread_count = 0
