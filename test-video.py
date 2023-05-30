@@ -2,68 +2,42 @@
 #	print(v.read())
 #	print(type(v.read()))
 import cv2
+import sounddevice as sd
 
-# Load the videos
-video1 = cv2.VideoCapture("C:/Users/kiho/Downloads/19.ts")
-video2 = cv2.VideoCapture("C:/Users/kiho/Downloads/20.ts")
-video_paths = ["C:/Users/kiho/Downloads/19.ts", "C:/Users/kiho/Downloads/20.ts"]
+# Define the video file path
+video_path = 'your_video.mp4'
 
-# Open the video capture object for the continuous video
-continuous_video = cv2.VideoCapture('continuous_video.mp4')
+# Open the video file using cv2.VideoCapture
+cap = cv2.VideoCapture(video_path)
 
-# Get the video dimensions of the continuous video
-width = int(continuous_video.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(continuous_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+# Get the video properties
+fps = cap.get(cv2.CAP_PROP_FPS)
 
-# Create a VideoWriter object to save the merged video
-merged_video = cv2.VideoWriter('merged_video.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (width, height))
+# Read the audio from the video using sounddevice
+audio, sample_rate = sd.read(video_path, dtype='float32')
 
-# Iterate over each video file path
-for video_path in video_paths:
-    # Open the video file
-    video = cv2.VideoCapture(video_path)
+# Create an audio playback stream
+stream = sd.OutputStream(channels=audio.shape[1], samplerate=sample_rate)
+
+# Start the audio playback
+stream.start()
+
+# Read and display frames from the video
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
     
-    # Loop until the continuous video ends
-    while continuous_video.isOpened():
-        # Read the next frame from the continuous video
-        ret_continuous, frame_continuous = continuous_video.read()
-        
-        # Check if the frame is read successfully
-        if not ret_continuous:
-            break
-        
-        # Display the frame from the continuous video
-        cv2.imshow('Merged Video', frame_continuous)
-        
-        # Write the frame from the continuous video to the merged video
-        merged_video.write(frame_continuous)
-        
-        # Read the next frame from the video being merged
-        ret, frame = video.read()
-        
-        # Check if the frame is read successfully
-        if not ret:
-            break
-        
-        # Resize the frame to match the dimensions of the continuous video
-        frame = cv2.resize(frame, (width, height))
-        
-        # Display the frame from the video being merged
-        cv2.imshow('Video Being Merged', frame)
-        
-        # Write the frame from the video being merged to the merged video
-        merged_video.write(frame)
-        
-        # Delay for 30 milliseconds to maintain the video playback speed
-        if cv2.waitKey(30) & 0xFF == ord('q'):
-            break
+    # Display the frame using cv2.imshow
+    cv2.imshow('Video', frame)
     
-    # Release the video object
-    video.release()
+    # Check for keyboard events and quit if 'q' is pressed
+    if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
+        break
 
-# Release the continuous video and merged video objects
-continuous_video.release()
-merged_video.release()
+# Release the video capture and stop the audio stream
+cap.release()
+stream.stop()
 
-# Destroy all OpenCV windows
+# Close all OpenCV windows
 cv2.destroyAllWindows()
