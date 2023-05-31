@@ -47,57 +47,89 @@ def fill_buffer():
 paths = []
 for n in range(1, 21):
 	paths.append(f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4')
-l_entire_frame = []
-l_indi_frame = []
-l_entire_frame.append(l_indi_frame)
-
 def play_video(path):
-	global flag
 	is_playing = True
 	n = 0
+	beginnig = time.time()
+	l_entire_frame = []
+	l_indi_frame = []
+	l_entire_frame.append(l_indi_frame)
+	fps = 0  # Variable to store the frames per second
+	
 	while True:
 		if len(paths) <= n:
 			print('break')
 			break
-		cap = cv2.VideoCapture(paths[n])
-		while True:
-			start = time.time()
-			fps = cap.get(cv2.CAP_PROP_FPS)
 
+		print('changed video')
+		cap = cv2.VideoCapture(paths[n])
+		fps = cap.get(cv2.CAP_PROP_FPS)
+		print(n, fps)
+		frame_duration = 1 / fps
+		start = time.time()
+		elapsed_time = 0.0
+		once_sec_start = time.time()
+		while True:
 			ret, frame = cap.read()
-			print('fps', fps)
-			if len(l_entire_frame[-1]) == fps:
-				l_entire_frame.append(l_indi_frame)
-				l_indi_frame = []
-			else:
-				print(l_indi_frame)
-				l_indi_frame.append(frame)
-			print(len(l_indi_frame))
+
 			if ret:
 				cv2.imshow('Video', frame)
-				
+
 			# Check for keyboard events and quit if 'q' is pressed
 			if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
 				break
 
+			# Add the frame to the current second's list
+			l_indi_frame.append(frame)
+			#print('l_indi_frame',len(l_indi_frame))
+			
+			#one_sec = time.time() - once_sec_start
+			one_sec = len(l_indi_frame) * frame_duration
+			# Update the elapsed time
 			elapsed_time = time.time() - start
-			video_duration = cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps
 
-			# Wait until the current video is fully played
-			if elapsed_time < video_duration:
-				if cv2.waitKey(1) & 0xFF == ord('q'):
-					is_playing = False
-					break
-				else:
-					continue
+			# If one second has passed, store the frames and reset the list
+			if one_sec >= 1.0:
+				l_entire_frame.append(l_indi_frame)
+				del l_indi_frame
+				l_indi_frame = []
+				once_sec_start = time.time()  # Reset the start time
+				print(len(l_entire_frame))
+
 			# Check if the video playback was interrupted
-			
-			
-			if not is_playing:
+			if elapsed_time >= cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps:
+				n += 1
+				print(len(l_entire_frame))
 				break
-			n = n + 1
 
+		if not is_playing:
+			break
+		print(time.time()-beginnig)
+			
 
+"""
+def play_video(path):
+	cap = cv2.VideoCapture(path)
+	fps = cap.get(cv2.CAP_PROP_FPS)
+	total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+	while cap.isOpened():
+		ret, frame = cap.read()
+		if not ret:
+			break
+
+		cv2.imshow('Video', frame)
+		if cv2.waitKey(30) & 0xFF == ord('q'):
+			break
+
+		current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
+		elapsed_time = current_frame / fps
+		print('Elapsed Time:', elapsed_time, 's')
+
+		if current_frame >= total_frames:
+			break
+
+	cap.release()
+	cv2.destroyAllWindows()"""
 fill_buffer()
 
 thread1 = threading.Thread(target=play_audio, args=[audio_file])
