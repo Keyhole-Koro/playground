@@ -47,6 +47,9 @@ def fill_buffer():
 paths = []
 for n in range(1, 21):
 	paths.append(f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4')
+l_entire_frame = []
+l_indi_frame = []
+l_entire_frame.append(l_indi_frame)
 
 def play_video(path):
 	global flag
@@ -57,13 +60,19 @@ def play_video(path):
 			print('break')
 			break
 		cap = cv2.VideoCapture(paths[n])
-		
 		while True:
 			start = time.time()
 			fps = cap.get(cv2.CAP_PROP_FPS)
 
 			ret, frame = cap.read()
-			
+			print('fps', fps)
+			if len(l_entire_frame[-1]) == fps:
+				l_entire_frame.append(l_indi_frame)
+				l_indi_frame = []
+			else:
+				print(l_indi_frame)
+				l_indi_frame.append(frame)
+			print(len(l_indi_frame))
 			if ret:
 				cv2.imshow('Video', frame)
 				
@@ -86,7 +95,6 @@ def play_video(path):
 			
 			if not is_playing:
 				break
-
 			n = n + 1
 
 
