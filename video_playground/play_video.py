@@ -5,7 +5,7 @@ import threading
 import time
 import sys
 
-flag = True
+
 
 # Buffer size in bytes
 buffer_size = 1024 * 1024  # 1 MB
@@ -44,9 +44,41 @@ def fill_buffer():
 				break
 			buffer.extend(chunk)
 
-paths = []
-for n in range(1, 21):
-	paths.append(f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4')
+
+def divide(video):
+	cap = cv2.VideoCapture(video)
+	total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+	fps = cap.get(cv2.CAP_PROP_FPS)
+	beginning_time = time.time()
+	segment_duration = 1
+	segments = []
+	position = 0
+	while position < total_frames:
+		cap.set(cv2.CAP_PROP_POS_FRAMES, position)
+		segment_frames = []
+		segment_end = position + round(segment_duration * cap.get(cv2.CAP_PROP_FPS))
+		print(segment_end, len(segments), time.time()-beginning_time, position, segment_end)
+		while position < segment_end:
+			ret, frame = cap.read()
+			
+			if ret:
+				segment_frames.append(frame)
+				#print(len(segments))
+				#print('segment_frames', len(segment_frames))
+				position += 1
+			else:
+				break
+		segments.append(segment_frames)
+	cap.release()
+	cv2.destroyAllWindows()
+	thread1 = threading.Thread(target=play_audio, args=[audio_file])
+	thread2 = threading.Thread(target=play_video, args=[segments])
+	thread1.start()
+	thread2.start()
+	thread1.join()
+	thread2.join()
+
+
 def play_video(path):
 	is_playing = True
 	n = 0
@@ -73,12 +105,13 @@ def play_video(path):
 			ret, frame = cap.read()
 
 			if ret:
-				cv2.imshow('Video', frame)
-
+				pass
+				#cv2.imshow('Video', frame)
+			
 			# Check for keyboard events and quit if 'q' is pressed
-			if cv2.waitKey(int(1000 / fps)) & 0xFF == ord('q'):
+			if cv2.waitKey(round(1000 / fps)) & 0xFF == ord('q'):
 				break
-
+			
 			# Add the frame to the current second's list
 			l_indi_frame.append(frame)
 			#print('l_indi_frame',len(l_indi_frame))
@@ -94,7 +127,7 @@ def play_video(path):
 				del l_indi_frame
 				l_indi_frame = []
 				once_sec_start = time.time()  # Reset the start time
-				print(len(l_entire_frame))
+				print(len(l_entire_frame), time.time()-beginnig, len(l_entire_frame)-(time.time()-beginnig), time.time()-beginnig, one_sec)
 
 			# Check if the video playback was interrupted
 			if elapsed_time >= cap.get(cv2.CAP_PROP_FRAME_COUNT) / fps:
@@ -107,33 +140,83 @@ def play_video(path):
 		print(time.time()-beginnig)
 			
 
-"""
-def play_video(path):
-	cap = cv2.VideoCapture(path)
-	fps = cap.get(cv2.CAP_PROP_FPS)
-	total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-	while cap.isOpened():
-		ret, frame = cap.read()
-		if not ret:
-			break
 
-		cv2.imshow('Video', frame)
-		if cv2.waitKey(30) & 0xFF == ord('q'):
-			break
+def play_video2(segments):
+	fps = len(segments[0])
+	print('fps', fps)
+	adjusted_fps = fps + 1
+	n_seg = 0
+	changed = time.time()
+	delayment = 1000/adjusted_fps
+	beginning = time.time()
+	while True:
+		changed = time.time()
+		segments[n_seg].append(segments[n_seg][-1])
+		print(len(segments[n_seg]))
+		print(time.time()-beginning)
+		for seg in segments[n_seg]:
+			cv2.imshow('Video', seg)
+			if cv2.waitKey(int(delayment)) & 0xFF == ord('q'):
+				break
+		n_seg += 1
 
-		current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
-		elapsed_time = current_frame / fps
-		print('Elapsed Time:', elapsed_time, 's')
-
-		if current_frame >= total_frames:
-			break
 
 	cap.release()
-	cv2.destroyAllWindows()"""
-fill_buffer()
+	cv2.destroyAllWindows
+	
+paths = []
+for n in range(1, 21):
+	paths.append(f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4')
+
+def on_trackbar_move(position, cap):
+	cap.set(cv2.CAP_PROP_POS_FRAMES, position)
+
+def play_video():
+	global flag
+	window_name = "PlayVideoAudio"
+	n = 0
+	flag = True
+
+	while True:
+		cap = cv2.VideoCapture(paths[n])
+		start = time.time()
+		fps = cap.get(cv2.CAP_PROP_FPS)
+		total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+		if not cap.isOpened():
+			sys.exit()
+
+		cv2.namedWindow(window_name)
+		cv2.createTrackbar('Position', window_name, 0, total_frames - 1, lambda x: on_trackbar_move(x, cap))
+
+		while True:
+			elapsed_time = (time.time() - start) * 1000
+			play_time = int(cap.get(cv2.CAP_PROP_POS_MSEC))
+
+			if elapsed_time < play_time:
+				key = cv2.waitKey(1)
+				if key == int(fps):
+					break
+				else:
+					continue
+			else:
+				ret, frame = cap.read()
+
+			if ret:
+				cv2.imshow(window_name, frame)
+				current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+				cv2.setTrackbarPos('Position', window_name, current_frame)
+			else:
+				break
+
+		n += 1
+
+	flag = False
+	cap.release()
+	cv2.destroyAllWindows()
 
 thread1 = threading.Thread(target=play_audio, args=[audio_file])
-thread2 = threading.Thread(target=play_video, args=[video_file])
+thread2 = threading.Thread(target=play_video, args=[])
 thread1.start()
 thread2.start()
 thread1.join()
