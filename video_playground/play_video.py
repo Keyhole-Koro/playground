@@ -174,6 +174,7 @@ def on_trackbar_move(position, cap):
 def play_video():
 	global flag
 	window_name = "PlayVideoAudio"
+	frames = []  # List to store frames
 	n = 0
 	flag = True
 
@@ -181,13 +182,12 @@ def play_video():
 		cap = cv2.VideoCapture(paths[n])
 		start = time.time()
 		fps = cap.get(cv2.CAP_PROP_FPS)
-		total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 		if not cap.isOpened():
 			sys.exit()
 
 		cv2.namedWindow(window_name)
-		cv2.createTrackbar('Position', window_name, 0, total_frames - 1, lambda x: on_trackbar_move(x, cap))
+		#cv2.createTrackbar('Position', window_name, 0, 1, lambda x: on_trackbar_move(x, cap))
 
 		while True:
 			elapsed_time = (time.time() - start) * 1000
@@ -195,25 +195,28 @@ def play_video():
 
 			if elapsed_time < play_time:
 				key = cv2.waitKey(1)
-				if key == int(fps):
+				if key == 1:
 					break
 				else:
 					continue
 			else:
+				print(elapsed_time, play_time)
 				ret, frame = cap.read()
 
 			if ret:
+				frames.append(frame)  # Store the actual frame
 				cv2.imshow(window_name, frame)
-				current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
-				cv2.setTrackbarPos('Position', window_name, current_frame)
+				#cv2.setTrackbarPos('Position', window_name, 0)
 			else:
-				break
-
-		n += 1
+				n += 1
+				cap = cv2.VideoCapture(paths[n])
+				start = time.time()
+				fps = cap.get(cv2.CAP_PROP_FPS)
 
 	flag = False
 	cap.release()
 	cv2.destroyAllWindows()
+
 
 thread1 = threading.Thread(target=play_audio, args=[audio_file])
 thread2 = threading.Thread(target=play_video, args=[])
