@@ -8,6 +8,7 @@ import asyncio
 import numpy as np
 from pydub import AudioSegment
 from pydub.playback import play
+import queue
 
 # Buffer size in bytes
 buffer_size = 1024 * 1024  # 1 MB
@@ -39,49 +40,15 @@ def play_audio(fname):
 	p.terminate()
 
 def playback_audio(audio_path):
-    audio = AudioSegment.from_file(audio_path)
-    interval = 1000
-    duration = len(audio)
+	audio = AudioSegment.from_file(audio_path)
+	interval = 1000
+	duration = len(audio)
 
-    current_time = 0#control
-    while current_time < duration:
-        segment = audio[current_time:current_time+interval]
-        play(segment)
-        current_time += interval
-
-def divide(video):
-	cap = cv2.VideoCapture(video)
-	total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-	fps = cap.get(cv2.CAP_PROP_FPS)
-	beginning_time = time.time()
-	segment_duration = 1
-	segments = []
-	position = 0
-	while position < total_frames:
-		cap.set(cv2.CAP_PROP_POS_FRAMES, position)
-		segment_frames = []
-		segment_end = position + round(segment_duration * cap.get(cv2.CAP_PROP_FPS))
-		print(segment_end, len(segments), time.time()-beginning_time, position, segment_end)
-		while position < segment_end:
-			ret, frame = cap.read()
-			
-			if ret:
-				segment_frames.append(frame)
-				#print(len(segments))
-				#print('segment_frames', len(segment_frames))
-				position += 1
-			else:
-				break
-		segments.append(segment_frames)
-	cap.release()
-	cv2.destroyAllWindows()
-	thread1 = threading.Thread(target=play_audio, args=[audio_file])
-	thread2 = threading.Thread(target=play_video, args=[segments])
-	thread1.start()
-	thread2.start()
-	thread1.join()
-	thread2.join()
-
+	current_time = 0#control
+	while current_time < duration:
+		segment = audio[current_time:current_time+interval]
+		play(segment)
+		current_time += interval
 
 def on_trackbar_move(position, cap):
 	cap.set(cv2.CAP_PROP_POS_FRAMES, position)
@@ -127,17 +94,6 @@ def play_video(frame_lists):
 
 	cv2.destroyAllWindows()
 	
-def playback_audio(audio_path):
-    audio = AudioSegment.from_file(audio_path)
-
-    interval = 1000  # Interval in milliseconds (1 second = 1000 milliseconds)
-    duration = len(audio)
-
-    current_time = 0
-    while current_time < duration:
-        segment = audio[current_time:current_time+interval]
-        play(segment)
-        current_time += interval
 		
 if __name__ == '__main__':
 	all_frames = []
@@ -148,11 +104,11 @@ if __name__ == '__main__':
 	print(len(all_frames))
 	for f in all_frames:
 		print(len(f))
-	thread1 = threading.Thread(target=play_audio, args=[audio_file])
-	thread2 = threading.Thread(target=play_video4, args=[all_frames])
-	thread1.start()
+	#thread1 = threading.Thread(target=play_audio, args=[audio_file])
+	thread2 = threading.Thread(target=play_video, args=[all_frames])
+	#thread1.start()
 	thread2.start()
-	thread1.join()
+	#thread1.join()
 	thread2.join()
 """
 	thread1 = threading.Thread(target=play_audio, args=[audio_file])
