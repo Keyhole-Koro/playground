@@ -11,6 +11,7 @@ from pydub.playback import play
 import queue
 import pygame
 import tkinter as tk
+import math
 
 class player:
 	def __init__(self, video_info, audio_info, volume, speed):
@@ -18,8 +19,11 @@ class player:
 		self.audio_info = audio_info
 		self.video_parts = video_info['num_parts']
 		self.audio_parts = audio_info['num_parts']
-		self.fps = video_info['fps']
-		self.length = video_info['length']
+		self.fps = round(video_info['fps'])
+		self.video_length = video_info['length']
+		self.audio_length = audio_info['length']
+		self.part_video_length = video_info['part_length']
+		self.part_audio_length = audio_info['part_length']
 		self.title = video_info['title']
 		self.volume = volume
 		self.speed = speed
@@ -27,8 +31,21 @@ class player:
 		self.chosen_playtime = 0
 		self.seek_bar = 0
 		self.value_label = None
+		self.file_position = 0
+		self.start_position = 0
+		
+		self.is_being_changed = False
+		
+		self.playing_video = None
+		self.playing_audio = None
+		self.seek_bar_thread = None
 		
 		all_frames = []
+		self.playing_audio = threading.Thread(target=self.play_audio)
+		self.seek_bar_thread = threading.Thread(target=self.seek_bar_gui)
+		self.playing_audio.start()
+		self.seek_bar_thread.start()
+		
 		"""
 		for n in range(1, 21):
 			path = f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4'
@@ -53,28 +70,75 @@ class player:
 
 		#cv2.destroyAllWindows()
 	def play_audio(self):
-		#https://www.pygame.org/docs/ref/music.html#pygame.mixer.music.get_endevent
-		pass
+		print('play_audio')
+		pygame.init()
+		# List of audio files (3-second duration each)
+		audio_files = []
+		for i in range(20):
+			audio_files.append(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output_segments/segment_{i}.wav")
+		
+		while True:
+			print('self.file_position', self.file_position)
+			audio_file = audio_files[self.file_position]
+
+			pygame.mixer.music.load(audio_file)
+			pygame.mixer.music.play()
+			print('self.start_position', self.start_position)
+			pygame.mixer.music.set_pos(self.start_position)
+			self.start_position = 0
+
+			start_time = time.time()
+
+			while pygame.mixer.music.get_busy():
+				if self.current_playtime != self.chosen_playtime and not self.is_being_changed:
+					print('called')
+					self.file_position = self.chosen_playtime // self.part_audio_length
+					self.start_position = self.chosen_playtime % self.part_audio_length
+					print(self.chosen_playtime, self.file_position, self.start_position)
+					pygame.mixer.music.stop()
+					self.is_being_changed = False
+					self.file_position -= 1
+					break
+			self.file_position += 1
+			pygame.mixer.music.stop()
+			
+
+		pygame.quit()
+			#https://www.pygame.org/docs/ref/music.html#pygame.mixer.music.get_endevent
 	def seek_bar_gui(self):
 		window = tk.Tk()
 		window.title(self.title)
 
-		# Create a seek bar widget
-		self.seek_bar = tk.Scale(window, from_=0, to=self.lengt, orient=tk.HORIZONTAL, command=self.update_value)
+		self.seek_bar = tk.Scale(window, from_=0, to=self.video_length, orient=tk.HORIZONTAL, command=self.update_value)
+		self.seek_bar.bind("<ButtonRelease-1>", self.on_seek_bar_release)
 		self.seek_bar.pack()
 
-		# Create a label to display the current value of the seek bar
 		self.value_label = tk.Label(window, text="Value: " + str(self.seek_bar.get()))
 		self.value_label.pack()
 
-		# Start the Tkinter event loop
 		window.mainloop()
 	def update_value(self, value):
 		self.value_label.config(text="Value: " + str(self.seek_bar.get()))
+
+	def on_seek_bar_release(self, event):
+		self.chosen_playtime = self.seek_bar.get()
+		self.is_being_changed = True
+		print("Seek bar value on release:", self.chosen_playtime)
+
 video_info = {
 	'title': 'test',
 	'fps' : 24,
 	'num_parts' : 20,
 	'length' : 193,
+	'part_length' : 10
 }
-player(0,0,0,0).seek_bar_gui()
+audio_info = {
+	'title': 'test',
+	'fps' : 24,
+	'num_parts' : 20,
+	'length' : 193,
+	'part_length' : 10
+}
+p = player(video_info, audio_info,0,0)
+#p.seek_bar_gui()
+#p.play_audio()

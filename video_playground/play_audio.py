@@ -1,8 +1,9 @@
 import pygame
-
+import threading
 from pydub import AudioSegment
 import os
 import math
+import time
 
 pygame.init()
 
@@ -33,45 +34,31 @@ def play_split_audios():
 		py_music.play()
 		pygame.time.wait(10000)
 
-def playback_audio(audio_path):
-	audio = AudioSegment.from_file(audio_path)
+def playback_audio():
+	pygame.init()
+	# List of audio files (3-second duration each)
+	audio_files = ["C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output_segments/segment_1.wav", "C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output_segments/segment_2.wav", "C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output_segments/segment_3.wav"]
 
-	chunk_size = 1000  # Chunk size in milliseconds
-	duration = len(audio)
+	# Iterate over each audio file
+	for audio_file in audio_files:
 
-	def play_audio():
-		current_time = 0
-		while current_time < duration:
-			chunk = audio[current_time:current_time+chunk_size]
-			q.put(chunk)
-			current_time += chunk_size
+		pygame.mixer.music.load(audio_file)
 
-		q.put(None)  # Signal the end of audio playback
+		pygame.mixer.music.play()
 
-	def play_chunks():
-		while True:
-			chunk = q.get()
-			if chunk is None:
-				break
-			play(chunk)
+		start_time = time.time()
 
-	q = queue.Queue()
-	play_thread = threading.Thread(target=play_audio)
-	chunks_thread = threading.Thread(target=play_chunks)
+		while pygame.mixer.music.get_busy():
+			current_time = time.time()
+			
 
-	play_thread.start()
-	chunks_thread.start()
+		pygame.mixer.music.stop()
 
-	play_thread.join()
-	chunks_thread.join()
-	
-play_split_audios()
-
-
+	pygame.quit()
 # Usage example
 audio_file = "audio.wav"
 output_folder = "audio_segments"
 segment_duration = 10000  # Duration of each segment in milliseconds
 extension = audio_file.split('.')[-1]
-
+playback_audio()
 #split_audio(audio_file, output_folder, segment_duration, extension)
