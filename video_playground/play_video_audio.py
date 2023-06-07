@@ -31,8 +31,10 @@ class player:
 		self.chosen_playtime = 0
 		self.seek_bar = 0
 		self.value_label = None
-		self.file_position = 0
-		self.start_position = 0
+		self.audio_file_position = 0
+		self.audio_start_position = 0
+		self.video_file_position = 0
+		self.video_start_position = 0
 		
 		self.is_being_changed = False
 		
@@ -40,19 +42,20 @@ class player:
 		self.playing_audio = None
 		self.seek_bar_thread = None
 		
+		self.commander = False
+		
 		all_frames = []
 		self.playing_audio = threading.Thread(target=self.play_audio)
+		self.playing_video = threading.Thread(target=self.play_video)
 		self.seek_bar_thread = threading.Thread(target=self.seek_bar_gui)
 		self.playing_audio.start()
+		self.playing_video.start()
 		self.seek_bar_thread.start()
 		
-		"""
-		for n in range(1, 21):
-			path = f'C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{n}.mp4'
-			print(path)
-			all_frames = create_frame_lists(path, all_frames)
-		"""
-			
+		self.commander = True
+		
+
+	"""
 	def play_video(self, frame_lists):
 		global flag
 		fps = 24
@@ -67,44 +70,93 @@ class player:
 						key = cv2.waitKey(1)
 						cv2.imshow('Video', frame)
 						break
-
+					if self.current_playtime != self.chosen_playtime and self.is_being_changed:
+						break
 		#cv2.destroyAllWindows()
+	"""
+
+	def play_video(self):
+		video_paths = []
+		for i in range(1, 21):
+			video_paths.append(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output/part{i}.mp4")
+		delay = 1/self.fps
+		ret = False
+		while True:
+			cap = cv2.VideoCapture(video_paths[self.video_file_position])
+			self.video_file_position += 1
+			cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_start_position*self.fps)
+			part_start = time.time()
+			
+			while not self.commander:
+				pass
+			
+			while True:
+				elapsed_time = time.time() - part_start
+				current_play_time = int(cap.get(cv2.CAP_PROP_POS_MSEC))
+				#print(elapsed_time, cap.get(cv2.CAP_PROP_POS_MSEC), cap.isOpened())
+				if elapsed_time > (current_play_time / 1000):
+					key = cv2.waitKey(1)
+					ret, frame = cap.read()
+					
+					if ret:
+						cv2.imshow('Video', frame)
+					else:
+						break
+
+				key = cv2.waitKey(1)
+				if key == ord('q'):
+					break
+				
+				if self.current_playtime != self.chosen_playtime and self.is_being_changed:
+					print('changed')
+					self.video_file_position, self.video_start_position = self.separate(self.chosen_playtime, self.part_audio_length)
+					self.commander = True
+					break
+		
 	def play_audio(self):
 		print('play_audio')
 		pygame.init()
 		# List of audio files (3-second duration each)
-		audio_files = []
-		for i in range(20):
-			audio_files.append(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/output_segments/segment_{i}.wav")
+		audio_paths = []
+		for i in range(1, 21):
+			audio_paths.append(f"C:/Users/kiho/OneDrive/デスクトップ/blockchain-playground/video_playground/audio_segments/segment_{i}.wav")
 		
 		while True:
-			print('self.file_position', self.file_position)
-			audio_file = audio_files[self.file_position]
 
-			pygame.mixer.music.load(audio_file)
-			pygame.mixer.music.play()
-			print('self.start_position', self.start_position)
-			pygame.mixer.music.set_pos(self.start_position)
-			self.start_position = 0
+			while not self.commander:
+				pass
+			
+			if self.audio_file_position <= self.audio_parts:
+				audio_file = audio_paths[self.audio_file_position]
+				pygame.mixer.music.load(audio_file)
+				pygame.mixer.music.play()
+				self.audio_file_position += 1
+				pygame.mixer.music.set_pos(self.audio_start_position)
+				self.audio_start_position = 0
 
-			start_time = time.time()
-
+			
 			while pygame.mixer.music.get_busy():
-				if self.current_playtime != self.chosen_playtime and not self.is_being_changed:
-					print('called')
-					self.file_position = self.chosen_playtime // self.part_audio_length
-					self.start_position = self.chosen_playtime % self.part_audio_length
-					print(self.chosen_playtime, self.file_position, self.start_position)
+				if self.current_playtime != self.chosen_playtime and self.is_being_changed:
+					self.current_playtime = self.chosen_playtime
+					self.audio_file_position, self.audio_start_position = self.separate(self.chosen_playtime, self.part_audio_length)
 					pygame.mixer.music.stop()
 					self.is_being_changed = False
-					self.file_position -= 1
 					break
-			self.file_position += 1
+
+			#if self.audio_file_position == self.audio_parts and not pygame.mixer.music.get_busy():
+			#	while self.current_playtime == self.chosen_playtime and self.is_being_changed:
+			#		pass
+			self.commander = True
 			pygame.mixer.music.stop()
-			
 
 		pygame.quit()
 			#https://www.pygame.org/docs/ref/music.html#pygame.mixer.music.get_endevent
+	def separate(self, chosen_playtime, part_length):
+		file_position = chosen_playtime // part_length
+		start_position = chosen_playtime % part_length
+		positions = [file_position, start_position]
+		return positions
+		
 	def seek_bar_gui(self):
 		window = tk.Tk()
 		window.title(self.title)
@@ -124,6 +176,8 @@ class player:
 		self.chosen_playtime = self.seek_bar.get()
 		self.is_being_changed = True
 		print("Seek bar value on release:", self.chosen_playtime)
+		self.commander = True
+		self.commander = False
 
 video_info = {
 	'title': 'test',
